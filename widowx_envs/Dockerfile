@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04
+FROM ubuntu:20.04
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=America/Los_Angeles
 ARG USER_ID=robonet
@@ -28,6 +28,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     unzip \
     ffmpeg \
     git-lfs \
+    gnupg \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -56,16 +57,15 @@ RUN curl 'https://raw.githubusercontent.com/Interbotix/interbotix_ros_manipulato
     && chmod +x /tmp/xsarm_amd64_install.sh \
     && echo "n" | /tmp/xsarm_amd64_install.sh \
     && rm /tmp/xsarm_amd64_install.sh
-ENV PYTHONPATH="${PYTHONPATH}:~/interbotix_ws/src/interbotix_ros_toolboxes/interbotix_xs_toolbox"
-
+ENV PYTHONPATH="${PYTHONPATH}:/home/${USER_ID}/interbotix_ws/src/interbotix_ros_toolboxes/interbotix_xs_toolbox"
 # install python dependencies
 COPY requirements.txt /tmp/requirements.txt
-RUN source /opt/ros/noetic/setup.bash && source ~/interbotix_ws/devel/setup.bash && python3 -m venv --system-site-packages ~/myenv
-RUN source ~/myenv/bin/activate && pip install wheel && pip install -r /tmp/requirements.txt
+RUN source /opt/ros/noetic/setup.bash && source /home/${USER_ID}/interbotix_ws/devel/setup.bash && python3 -m venv --system-site-packages /home/${USER_ID}/myenv
+RUN source /home/${USER_ID}/myenv/bin/activate && pip install wheel && pip install -r /tmp/requirements.txt
 
 # add widowx_envs code for build step
 COPY . /home/${USER_ID}/widowx_envs
-RUN ln -s ~/widowx_envs ~/interbotix_ws/src/
+RUN ln -s /home/${USER_ID}/widowx_envs /home/${USER_ID}/interbotix_ws/src/
 ENV PYTHONPATH="${PYTHONPATH}:/home/${USER_ID}/interbotix_ws/src/widowx_envs"
 
 ENV ROBONETV2_ARM=wx250s
@@ -75,18 +75,18 @@ ENV REALSENSE_SERIAL=920312072629
 
 # build interbox ros packages
 RUN source /opt/ros/noetic/setup.bash \
-    && source ~/interbotix_ws/devel/setup.bash \
-    && cd ~/interbotix_ws \
+    && source /home/${USER_ID}/interbotix_ws/devel/setup.bash \
+    && cd /home/${USER_ID}/interbotix_ws \
     && catkin_make \
-    && touch ~/.built
+    && touch /home/${USER_ID}/.built
 
 # add utility functions
-RUN sudo ln -s ~/widowx_envs/scripts/go_to_sleep_pose.py /usr/local/bin/go_sleep
-RUN sudo ln -s ~/widowx_envs/scripts/go_to_neutral_pose.py /usr/local/bin/go_neutral
+RUN sudo ln -s /home/${USER_ID}/widowx_envs/scripts/go_to_sleep_pose.py /usr/local/bin/go_sleep
+RUN sudo ln -s /home/${USER_ID}/widowx_envs/scripts/go_to_neutral_pose.py /usr/local/bin/go_neutral
 
-RUN echo 'source ~/myenv/bin/activate' >> ~/.bashrc
-RUN echo 'source /opt/ros/noetic/setup.bash' >> ~/.bashrc
-RUN echo 'source ~/interbotix_ws/devel/setup.bash' >> ~/.bashrc
+RUN echo 'source /home/${USER_ID}/myenv/bin/activate' >> /home/${USER_ID}/.bashrc
+RUN echo 'source /opt/ros/noetic/setup.bash' >> /home/${USER_ID}/.bashrc
+RUN echo 'source /home/${USER_ID}/interbotix_ws/devel/setup.bash' >> /home/${USER_ID}/.bashrc
 
 WORKDIR /home/${USER_ID}
 
@@ -97,4 +97,4 @@ RUN git clone https://github.com/youliangtan/edgeml && \
 
 # Create alias to python3 widowx_envs/widowx_envs/widowx_env_service.py
 # This is a workaround for pip3 install -e .
-RUN echo 'alias widowx_env_service="python3 ~/widowx_envs/widowx_envs/widowx_env_service.py"' >> ~/.bashrc
+RUN echo 'alias widowx_env_service="python3 /home/${USER_ID}/widowx_envs/widowx_envs/widowx_env_service.py"' >> /home/${USER_ID}/.bashrc

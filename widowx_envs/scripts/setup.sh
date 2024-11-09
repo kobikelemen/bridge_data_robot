@@ -7,7 +7,6 @@ if [[ -z "${ROBONETV2_ARM}" ]]; then
     exit 1
 fi
 
-cd
-if [ ! -f ".built" ]; then
-    cd ~/interbotix_ws && catkin_make && touch ~/.built
+if [ ! -f "/home/robonet/.built" ]; then
+    cd /home/robonet/interbotix_ws && catkin_make && touch /home/robonet/.built
 fi

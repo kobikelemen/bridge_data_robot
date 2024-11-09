@@ -17,6 +17,18 @@ while IFS= read -r line; do
         yellow=$(echo "$line" | awk -F '(' '{print $2}' | awk -F ')' '{print $1}')
     elif [[ $line == *"Intel(R) RealSense(TM) Depth Ca"* ]]; then
         d435=$(echo "$line" | awk -F 'Ca ' '{print $2}' | awk -F ')' '{print $1}')
+    elif [[ $line == *"Arducam B0459"* ]]; then
+        # If blue is not set, use Arducam as blue camera
+        if [ -z "$blue" ]; then
+            # blue=$(echo "$line" | awk -F '(' '{print $2}' | awk -F ')' '{print $1}')
+            # Get the next line which should contain the device path
+            read -r device_path
+            # blue=$(echo "$device_path" | tr -d '\t')
+            # Only use /dev/video0 for this camera
+            if [[ $device_path == *"/dev/video0"* ]]; then
+                blue="/dev/video0"
+            fi
+        fi
     fi
 done < <(v4l2-ctl --list-devices)
 
