@@ -179,3 +179,134 @@ that can be fixed by running the following commands and subsequently restarting 
 sudo groupadd docker
 sudo usermod -aG docker $USER
 ```
+
+# KScale Setup Notes on BeeLink AMD SER5 machine  
+
+### Core Issue
+
+With the current setup, normal python stuff wont work. For example when you try to do
+```bash
+docker compose exec robonet bash -lic "go_sleep"
+```
+
+you'll get some errors because the Dockerfile doesnt actually setup the env properly. So instead of just running the script, you need to actually to some setup and then run stuff. So to run the above command, i.e. run the go_sleep script (move the arm to neurtral and then sleep), you need to do set up the env before you run the python script. So you need to do this:
+
+```bash
+# Enter container and activate environment
+docker compose exec robonet bash
+source /home/robonet/myenv/bin/activate
+
+# Install required packages with specific versions
+pip uninstall -y numpy scipy scikit-image numba
+pip install numpy==1.23.4 scipy==1.10.1 scikit-image==0.19.3 numba
+
+# Source ROS environment
+source /opt/ros/noetic/setup.bash
+source /home/robonet/interbotix_ws/devel/setup.bash
+
+# Finally, run the script
+python /home/robonet/widowx_envs/scripts/go_to_sleep_pose.py
+```
+
+
+<!-- ```bash
+# Enter container and activate environment
+docker compose exec robonet bash
+source /home/robonet/myenv/bin/activate
+
+# Install required packages with specific versions
+pip install funcsigs
+pip install numpy==1.23.5 scipy==1.9.3 scikit-image==0.19.3
+pip install rospkg catkin_pkg
+
+# Install widowx_envs package
+cd /home/robonet/interbotix_ws/src/widowx_envs
+pip install -e .
+
+# Source ROS environment
+source /opt/ros/noetic/setup.bash
+source /home/robonet/interbotix_ws/devel/setup.bash
+``` -->
+
+
+
+### Install Logs / Notes
+
+When you run `./host_install_sh` it will ask you to install a bunch of stuff, say yes to everything except the nvidia-docker, cause the beelink does NOT have an nvidia-gpu.
+
+### Required Changes
+Since the BeeLink uses AMD graphics instead of NVIDIA, we have made these changes:
+
+1. Change the base image from NVIDIA CUDA to standard Ubuntu:
+```dockerfile
+# Change FROM
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04
+# To
+FROM ubuntu:20.04
+```
+
+2. Add `gnupg` to the initial package installation list (needed for ROS setup):
+```dockerfile
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    python3-pip \
+    # ... other packages ...
+    git-lfs \
+    gnupg \    # Add this line
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+```
+
+3. Remove the NVIDIA runtime from docker-compose.yml:
+```yaml
+services:
+  robonet:
+    # ... other configurations ...
+    # runtime: nvidia  # Remove or comment out this line
+    volumes:
+      # ... rest of configuration ...
+```
+
+
+### Additional Setup Steps
+I also needed to install v4l-utils to run the next part `./generate_usb_config.sh`
+
+```bash
+# Install v4l-utils for camera device management
+sudo apt-get update
+sudo apt-get install v4l-utils
+```
+
+### Camera Setup
+We're using the Arducam B0459 (USB3 12MP) as our primary camera. Specifications:
+- Resolution: 4056×3040
+- Frame rate: 10 FPS
+- MegaPixels: 12.33 MP
+
+The `generate_usb_config.sh` script has been updated to automatically detect and configure this camera. When using the Arducam, it will be assigned as the 'blue' camera if no Logitech C920 is present. No additional configuration is needed - the camera should work as plug-and-play once connected via USB.
+
+
+
+<!-- ### Testing the Robot Arm
+
+To verify the robot arm is working properly:
+
+```bash
+# Test basic movement (moves to sleep position)
+docker compose exec robonet bash -lic "go_sleep"
+
+# For interactive control
+docker compose exec robonet bash -lic "python3 widowx_envs/widowx_envs/teleop.py"
+```
+
+The teleop script provides keyboard controls:
+- w/s: forward/backward
+- a/d: left/right
+- z/c: up/down
+- i/k: rotate yaw
+- j/l: rotate pitch
+- n/m: rotate roll
+- space: toggle gripper
+- r: reset robot
+- q: quit -->

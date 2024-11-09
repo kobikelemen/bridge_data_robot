@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04
+FROM ubuntu:20.04
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=America/Los_Angeles
 ARG USER_ID=robonet
@@ -28,6 +28,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     unzip \
     ffmpeg \
     git-lfs \
+    gnupg \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -94,6 +95,12 @@ WORKDIR /home/${USER_ID}
 RUN git clone https://github.com/youliangtan/edgeml && \
     cd edgeml && \
     pip3 install -e .
+
+# Clone oculus_reader without downloading LFS files
+RUN GIT_LFS_SKIP_SMUDGE=1 git clone https://github.com/rail-berkeley/oculus_reader.git /home/${USER_ID}/oculus_reader \
+    && cd /home/${USER_ID}/oculus_reader \
+    && pip install -e .
+
 
 # Create alias to python3 widowx_envs/widowx_envs/widowx_env_service.py
 # This is a workaround for pip3 install -e .

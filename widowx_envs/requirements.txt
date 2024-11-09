@@ -26,4 +26,4 @@ pickle5
 h5py
 funcsigs
 numba
-git+https://github.com/rail-berkeley/oculus_reader.git
+# git+https://github.com/rail-berkeley/oculus_reader.git
