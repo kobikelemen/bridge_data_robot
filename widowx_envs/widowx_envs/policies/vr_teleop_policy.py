@@ -165,10 +165,18 @@ class VRTeleopPolicy(Policy):
         return new_robot_transform
 
     def oculus_to_robot(self, current_vr_transform):
-        current_vr_transform = tr.RpToTrans(Quaternion(axis=[0, 0, 1], angle=np.pi / 2).rotation_matrix,
-                                            np.zeros(3)).dot(
-            tr.RpToTrans(Quaternion(axis=[1, 0, 0], angle=np.pi / 2).rotation_matrix, np.zeros(3))).dot(
-            current_vr_transform)
+        # First rotation: 90 degrees around Z axis
+        rot_z = tr.RpToTrans(Quaternion(axis=[0, 0, 1], angle=np.pi / 2).rotation_matrix, np.zeros(3))
+        
+        # Second rotation: 90 degrees around X axis  
+        rot_x = tr.RpToTrans(Quaternion(axis=[1, 0, 0], angle=np.pi / 2).rotation_matrix, np.zeros(3))
+        
+        # Apply rotations to transform
+        # Uncomment/comment these lines to control which rotations are applied
+        current_vr_transform = rot_z.dot(current_vr_transform)  # 90 degree Z rotation
+        current_vr_transform = rot_x.dot(current_vr_transform)  # 90 degree X rotation
+        
+
         return current_vr_transform
 
     def reset(self):
@@ -180,3 +188,27 @@ class VRTeleopPolicy(Policy):
         self.prev_handle_press = False
         self.reference_vr_transform = None
         self.reference_robot_transform = None
+
+
+"""
+
+        transform            = tr.RpToTrans(Quaternion(axis=[0, 0, 1], angle=np.pi / 2).rotation_matrix, np.zeros(3)).dot(tr.RpToTrans(Quaternion(axis=[1, 0, 0], angle=np.pi / 2).rotation_matrix, np.zeros(3)))
+
+        # Invert Forward-Backward Axis (X-axis)
+        # Uncomment the line below to invert the forward-backward axis
+        # inversion_matrix_x = np.diag([-1, 1, 1, 1])  # Invert X-axis
+        # current_vr_transform = inversion_matrix_x.dot(current_vr_transform)
+
+        # Invert Left-Right Axis (Y-axis)
+        # Uncomment the line below to invert the left-right axis
+        # inversion_matrix_y = np.diag([1, -1, 1, 1])  # Invert Y-axis
+        # current_vr_transform = inversion_matrix_y.dot(current_vr_transform)
+
+        # Invert Up-Down Axis (Z-axis)
+        # Uncomment the line below to invert the up-down axis
+        # inversion_matrix_z = np.diag([1, 1, -1, 1])  # Invert Z-axis
+        # current_vr_transform = inversion_matrix_z.dot(current_vr_transform)
+
+        # Apply the original transformation
+        current_vr_transform = transform.dot(current_vr_transform)
+"""
