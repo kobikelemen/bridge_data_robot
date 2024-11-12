@@ -93,6 +93,27 @@ class VRTeleopPolicy(Policy):
         publish_transform(self.reference_robot_transform, 'reference_robot_transform')
         M_rob, p_rob = tr.TransToRp(self.reference_robot_transform)
         M_delta, p_delta = tr.TransToRp(delta_vr_transform)
+        
+        # Handle position delta - invert x and y axes
+        swap_axes = np.array([
+            [-1, 0, 0],
+            [0, -1, 0],
+            [0, 0, 1]   
+        ])
+        p_delta = swap_axes.dot(p_delta)
+
+        # Handle rotation - invert roll and pitch
+        try:
+            euler = tr.rotationMatrixToEulerAngles(M_delta, 1e-5)
+            euler[:2] = -euler[:2]  # Invert roll and pitch
+            M_delta = tr.eulerAnglesToRotationMatrix(euler)
+        except Exception as e:
+            print("Error in rotation matrix conversion: ", e)
+            import traceback
+            print(traceback.format_exc())
+            raise e
+
+        # Create new transform with modified delta
         new_robot_transform = tr.RpToTrans(M_delta.dot(M_rob), p_rob + p_delta)
 
         if self.action_space == '3trans1rot':
@@ -171,11 +192,7 @@ class VRTeleopPolicy(Policy):
         # Second rotation: 90 degrees around X axis  
         rot_x = tr.RpToTrans(Quaternion(axis=[1, 0, 0], angle=np.pi / 2).rotation_matrix, np.zeros(3))
         
-        # Apply rotations to transform
-        # Uncomment/comment these lines to control which rotations are applied
-        current_vr_transform = rot_z.dot(current_vr_transform)  # 90 degree Z rotation
-        current_vr_transform = rot_x.dot(current_vr_transform)  # 90 degree X rotation
-        
+        current_vr_transform = rot_z.dot(rot_x).dot(current_vr_transform)
 
         return current_vr_transform
 
