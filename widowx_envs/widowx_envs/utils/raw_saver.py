@@ -5,6 +5,8 @@ import cv2
 import copy
 from widowx_envs.utils.utils import AttrDict
 import glob
+import json
+import datetime
 
 import numpy as np
 
@@ -18,6 +20,8 @@ class RawSaver():
     def __init__(self, save_dir, ngroup=1000):
         self.save_dir = save_dir
         self.ngroup = ngroup
+        self.current_group = None
+        self.current_group_folder = None
 
     def save_traj(self, itr, agent_data=None, obs_dict=None, policy_outputs=None, reward_data=None):
 
@@ -27,8 +31,39 @@ class RawSaver():
 
         igrp = itr // self.ngroup
         group_folder = os.path.join(self.save_dir , 'raw/traj_group{}'.format(igrp))
-        if not os.path.exists(group_folder):
-            os.makedirs(group_folder)
+
+        # Handle group metadata when starting a new group
+        if self.current_group != igrp:
+            self.current_group = igrp
+            self.current_group_folder = group_folder
+            
+            if not os.path.exists(group_folder):
+                os.makedirs(group_folder)
+                print("##################################")
+                print(f"Saving trajectory group in {group_folder}")
+                print("##################################")
+                print("IMPORTANT!!"*25)
+                print(f"After collecting trajectories, if there are any notes you want to add, you can do so in the post_collection_notes field in the group_metadata.json file.")
+                print(f"That file is located at {group_folder}/group_metadata.json")
+                print(f"For example, if you mess up the final trajectory or soemthing, just add that info in the post_collection_notes field for this trajectory group.")
+                print("\nStarting new trajectory group {}".format(igrp))
+                print(f"IMPORTANT!! IMPORTANT!! IMPORTANT!!")
+                print("IMPORTANT!!: Read the info above please!")
+                print("Enter a text prompt for this group of trajectories:")
+                group_prompt = input().strip()
+                print("Enter any additional info (collector name, notes, etc):")
+                group_info = input().strip()
+                
+                if group_prompt or group_info:
+                    with open(os.path.join(group_folder, 'group_metadata.json'), 'w') as f:
+                        json.dump({
+                            'group_id': igrp,
+                            'prompt': group_prompt,
+                            'additional_info': group_info,
+                            'start_time': datetime.datetime.now().isoformat(),
+                            'post_collection_notes': '',
+                            'trajectories': []
+                        }, f, indent=2)
 
         traj_folder = os.path.join(group_folder , 'traj{}'.format(itr))
         if os.path.exists(traj_folder):
